@@ -22,7 +22,106 @@ const winningCombinations = [
 
 const createBoard = () => Array.from({ length: 9 }, () => EMPTY);
 
-const info = (text) => (document.getElementById("info").innerText = text);
+const info = (type) => {
+  let text = "";
+
+  switch (type) {
+    case "win":
+      text += currentPlayer === AI ? "AI wins" : "You win";
+      break;
+    case "tie":
+      text += "Tie!";
+      break;
+    default:
+      break;
+  }
+
+  document.getElementById("info").innerText = text;
+};
+
+const minimax = (board, isMaximizer) => {
+  const evaluate = () => {
+    for (let combination of winningCombinations) {
+      const [a, b, c] = combination;
+
+      if (board[a] === EMPTY || board[b] === EMPTY || board[c] === EMPTY) {
+        continue;
+      }
+
+      if (board[a] === board[b] && board[b] === board[c]) {
+        return board[a] === AI ? 1 : -1;
+      }
+    }
+
+    return 0;
+  };
+
+  let score = evaluate();
+
+  if (score !== 0) {
+    return score;
+  }
+
+  if (!board.includes(EMPTY)) {
+    return 0;
+  }
+
+  let best;
+
+  if (isMaximizer) {
+    best = -Infinity;
+
+    for (let position in board) {
+      if (board[position] === EMPTY) {
+        board[position] = AI;
+
+        let minimized = minimax(board, false);
+
+        board[position] = EMPTY;
+
+        best = Math.max(best, minimized);
+      }
+    }
+  } else {
+    best = Infinity;
+
+    for (let position in board) {
+      if (board[position] === EMPTY) {
+        board[position] = HUMAN;
+
+        let maximized = minimax(board, true);
+
+        board[position] = EMPTY;
+
+        best = Math.min(best, maximized);
+      }
+    }
+  }
+
+  return best;
+};
+
+const findBestMove = () => {
+  let bestScore = -Infinity;
+  let bestPosition = -1;
+
+  for (let position in board) {
+    if (board[position] === EMPTY) {
+      board[position] = AI;
+
+      let score = minimax(board, false);
+
+      board[position] = EMPTY;
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestPosition = position;
+      }
+    }
+  }
+
+  return bestPosition;
+};
 
 const checkWinner = () => {
   for (let combination of winningCombinations) {
@@ -51,22 +150,24 @@ const move = (position) => {
 
     if (checkWinner()) {
       gameRun = false;
-      info(currentPlayer + " wins!");
+      info("win");
     } else if (!board.includes(EMPTY)) {
       gameRun = false;
-      info("Tie!");
+      info("tie");
     } else {
       currentPlayer = currentPlayer === HUMAN ? AI : HUMAN;
-      info(currentPlayer + " Turn");
+      if (currentPlayer === AI) {
+        move(findBestMove());
+      }
     }
   }
 };
 
 const initState = () => {
+  info("");
   gameRun = true;
   board = createBoard();
   currentPlayer = HUMAN;
-  info(currentPlayer + " Turn");
 };
 
 const restart = () => {
